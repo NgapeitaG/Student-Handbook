@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# We only want this script to work once (the first time it's run).
+# So it's wrapped in an if statement that uses the file renaming
+# as an indicator to know if it has been run before.
+#
+# If you want to run it again, do this first:
+#   git branch -D deployed
+#   git remote remove upstream
+#   mv README.md GITBOOK_README.md
+#   mv BUILD_INSTRUCTIONS.md README.md
+
+if [ -f ./GITBOOK_README.md ]; then
+
+  echo "Adding an upstream remote"
+  git remote add upstream https://github.com/dev-academy-programme/book-source.git
+  # To prevent accidentally pushing cohort-specific edits upstream:
+  git remote set-url --push upstream no_url
+
+  echo "Creating a deployment branch"
+  git branch deployed
+
+  echo "Renaming README.md"
+  mv README.md BUILD_INSTRUCTIONS.md
+  mv GITBOOK_README.md README.md
+
+  echo "Installing the GitBook CLI tool"
+  npm install -g gitbook-cli
+
+fi
+

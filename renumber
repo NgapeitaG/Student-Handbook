@@ -1,0 +1,98 @@
+#!/usr/bin/env node
+
+const fs = require('fs')
+const path = require('path')
+
+const folderName = process.argv[2]
+
+if (folderIsValid(folderName)) {
+  processFiles(folderName, newNames => {
+    // eslint-disable-next-line no-console
+    newNames.forEach(newName => console.log(newName))
+  })
+} else {
+  process.exit(0)
+}
+
+function folderIsValid (folderName) {
+  if (!folderName) {
+    showUsage('Must provide the path to a folder')
+    process.exit(1)
+  }
+
+  if (folderName.indexOf('-h') === 0 || folderName.indexOf('--help') === 0) {
+    showUsage()
+    return false
+  }
+
+  fs.stat(path.join(process.cwd(), folderName), (err, stats) => {
+    if (err || !stats.isDirectory()) {
+      showUsage('Folder does not seem to exist')
+      process.exit(1)
+    }
+  })
+
+  return true
+}
+
+function processFiles (folderName) {
+  const folderPath = path.join(process.cwd(), folderName)
+  fs.readdir(folderPath, (err, files) => {
+    if (err) {
+      showUsage(err.message)
+    } else {
+      files.filter(isNumbered).forEach((oldName, index) => {
+        const newName = getNewFileName(oldName, index)
+        const oldPath = path.join(folderPath, oldName)
+        const newPath = path.join(folderPath, newName)
+        fs.rename(oldPath, newPath, err => {
+          if (err) showUsage(`Renaming: ${err.message}`)
+          console.log(newName)
+        })
+      })
+    }
+  })
+}
+
+function isNumbered (file) {
+  const firstLetter = file[0]
+  if (firstLetter === '0') return true
+  return Number.isInteger(parseInt(firstLetter, 10))
+}
+
+function getNewFileName (oldName, index) {
+  const hyphen = oldName.indexOf('-')
+  const newNumber = String('0' + (index + 1)).slice(-2)
+  const newName = newNumber + oldName.slice(hyphen)
+  return newName
+}
+
+function showUsage (errorMsg) {
+  if (errorMsg) {
+    console.error('  Error:', errorMsg)
+  } else {
+    console.info(`  This script renumbers all of the numbered filenames in a folder.
+
+    Assuming the files are named like so:
+      01-foo.ext, 02-bar.ext, 03-baz.ext, ...
+
+    If you want to renumber them so foo.ext was last, just rename
+    it to 04-foo.ext (or any number larger than the last one) and
+    run the script. It will rename all of the files starting with 01.
+
+    Basically just get the numbered files sorted correctly and the script
+    will take care of renaming the number part of the filename to be in
+    order without gaps. You can even use letters. For example, if you want
+    baz.ext to be the second file, just rename it to 01a-baz.ext and run
+    the script. Be sure the first character of the filename is a number.
+    
+    It currently only supports 2 digit numbers and hyphens as separators.`)
+  }
+
+  console.info(`
+  Usage:
+    ./renumber path_to_folder
+  For more information:
+    ./renumber --help | -h`)
+}
+
